@@ -1,0 +1,47 @@
+version: "3.9"
+services:
+  mosquitto:
+    image: eclipse-mosquitto:2
+    container_name: mosquitto
+    restart: unless-stopped
+    ports: ["1883:1883"]
+    volumes:
+      - ./nx-core-ops/mosquitto/config:/mosquitto/config
+      - ./nx-core-ops/mosquitto/data:/mosquitto/data
+      - ./nx-core-ops/mosquitto/log:/mosquitto/log
+
+  nodered:
+    image: nodered/node-red:latest
+    container_name: nodered
+    restart: unless-stopped
+    ports: ["1880:1880"]
+    environment: [ "TZ=America/Tijuana" ]
+    volumes: [ "./nx-core-ops/nodered:/data" ]
+    depends_on: [ mosquitto ]
+
+  influxdb:
+    image: influxdb:2.7
+    container_name: influxdb
+    restart: unless-stopped
+    ports: ["8086:8086"]
+    env_file: [ ".env" ]
+    environment:
+      - DOCKER_INFLUXDB_INIT_MODE=setup
+      - DOCKER_INFLUXDB_INIT_USERNAME=${INFLUX_USER}
+      - DOCKER_INFLUXDB_INIT_PASSWORD=${INFLUX_PASS}
+      - DOCKER_INFLUXDB_INIT_ORG=AlgorithmOps
+      - DOCKER_INFLUXDB_INIT_BUCKET=OPEXIA
+    volumes: [ "./nx-core-ops/influxdb:/var/lib/influxdb2" ]
+
+  grafana:
+    image: grafana/grafana:10.4.2
+    container_name: grafana
+    restart: unless-stopped
+    ports: ["3000:3000"]
+    env_file: [ ".env" ]
+    environment:
+      - GF_SECURITY_ADMIN_USER=${GRAFANA_USER}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASS}
+      - TZ=America/Tijuana
+    volumes: [ "./nx-core-ops/grafana:/var/lib/grafana" ]
+    depends_on: [ influxdb ]

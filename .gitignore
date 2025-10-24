@@ -1,0 +1,8 @@
+influxdb/
+grafana/
+nodered/
+.env
+*.env
+*.key
+*.crt
+.DS_Store
