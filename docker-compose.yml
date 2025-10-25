@@ -4,9 +4,10 @@ services:
     image: eclipse-mosquitto:2
     container_name: mosquitto
     restart: unless-stopped
-    ports: ["1883:1883"]
+    ports: ["1883:1883", "8883:8883"]      # ← añadimos 8883 (TLS)
     volumes:
       - ./nx-core-ops/mosquitto/config:/mosquitto/config
+      - ./nx-core-ops/mosquitto/certs:/mosquitto/certs   # ← certificados
       - ./nx-core-ops/mosquitto/data:/mosquitto/data
       - ./nx-core-ops/mosquitto/log:/mosquitto/log
 
