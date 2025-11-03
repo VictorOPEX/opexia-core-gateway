@@ -1,8 +1,36 @@
-influxdb/
-grafana/
-nodered/
-.env
-*.env
-*.key
-*.crt
+# General artifacts
 .DS_Store
+*.log
+*.tgz
+
+# Environment files
+.env
+.env.*
+env/
+
+# Node / npm
+node_modules/
+npm-debug.log*
+yarn-error.log*
+
+# Backups
+backups/
+
+# Mosquitto runtime / secrets
+nx-core-ops/mosquitto/config/passwords
+nx-core-ops/mosquitto/config/acl.conf
+nx-core-ops/mosquitto/config/mosquitto.conf.bak
+nx-core-ops/mosquitto/data/
+nx-core-ops/mosquitto/log/
+nx-core-ops/mosquitto/certs/
+
+# InfluxDB & Grafana volumes
+nx-core-ops/influxdb/
+nx-core-ops/grafana/
+
+# Node-RED sensitive/runtime files
+nx-core-ops/nodered/
+nx-core-ops/nodered/flows_cred.json
+nx-core-ops/nodered/*.backup
+nx-core-ops/nodered/.config*.json
+nx-core-ops/nodered/lib/

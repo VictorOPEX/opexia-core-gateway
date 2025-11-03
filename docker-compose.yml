@@ -1,4 +1,3 @@
-version: "3.9"
 services:
   mosquitto:
     image: eclipse-mosquitto:2
@@ -16,7 +15,12 @@ services:
     container_name: nodered
     restart: unless-stopped
     ports: ["1880:1880"]
-    environment: [ "TZ=America/Tijuana" ]
+    env_file: [ ".env" ]
+    environment:
+      - TZ=${TZ}
+      - NODE_RED_ENABLE_PROJECTS=false
+      - NODE_RED_CREDENTIAL_SECRET=${NR_CREDENTIAL_SECRET}
+      - INFLUX_TOKEN=${INFLUX_TOKEN}
     volumes: [ "./nx-core-ops/nodered:/data" ]
     depends_on: [ mosquitto ]
 
