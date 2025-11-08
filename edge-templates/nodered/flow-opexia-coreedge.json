@@ -1,0 +1,321 @@
+[
+    {
+        "id": "flow-opexia-coreedge",
+        "type": "tab",
+        "label": "OPEXIA - CORE+EDGE (1 PC)",
+        "disabled": false,
+        "info": "Piloto: CORE y EDGE en una sola mini PC, TLS+ACL y env\u00edo a InfluxDB."
+    },
+    {
+        "id": "inj_tick",
+        "type": "inject",
+        "z": "flow-opexia-coreedge",
+        "name": "Simular conteo (cada 1s)",
+        "props": [
+            {
+                "p": "payload"
+            },
+            {
+                "p": "topic",
+                "vt": "str"
+            }
+        ],
+        "repeat": "1",
+        "once": true,
+        "onceDelay": "1",
+        "topic": "opexia/LAB/edge/ed-gate-zn1-01/tele/piece_count",
+        "payload": "1",
+        "payloadType": "num",
+        "x": 410,
+        "y": 540,
+        "wires": [
+            [
+                "fn_counter"
+            ]
+        ]
+    },
+    {
+        "id": "fn_counter",
+        "type": "function",
+        "z": "flow-opexia-coreedge",
+        "d": true,
+        "name": "Acumular conteo pieza",
+        "func": "// Acumula piezas en memoria (solo demo)\nlet total = flow.get('piece_total') || 0;\nconst inc = Number(msg.payload) || 0;\nif (inc > 0) total += inc;\nflow.set('piece_total', total);\n\n// Env\u00edo como JSON breve para debug y LP\nmsg.payload = { piece: inc, total: total, ts: Date.now() };\nreturn msg;",
+        "outputs": 1,
+        "timeout": "",
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 480,
+        "y": 360,
+        "wires": [
+            [
+                "mqtt_out_edge",
+                "fn_to_lp",
+                "dbg_core"
+            ]
+        ]
+    },
+    {
+        "id": "mqtt_out_edge",
+        "type": "mqtt out",
+        "z": "flow-opexia-coreedge",
+        "name": "EDGE \u2192 MQTT (piece_count)",
+        "topic": "",
+        "qos": "0",
+        "retain": "",
+        "respTopic": "",
+        "contentType": "",
+        "userProps": "",
+        "correl": "",
+        "expiry": "",
+        "broker": "BROKER_EDGE_TLS",
+        "x": 930,
+        "y": 360,
+        "wires": []
+    },
+    {
+        "id": "mqtt_in_core",
+        "type": "mqtt in",
+        "z": "flow-opexia-coreedge",
+        "name": "CORE escucha EDGE (tele/#)",
+        "topic": "opexia/LAB/edge/+/tele/#",
+        "qos": "0",
+        "datatype": "json",
+        "broker": "BROKER_CORE_TLS",
+        "nl": false,
+        "rap": true,
+        "rh": 0,
+        "inputs": 0,
+        "x": 160,
+        "y": 220,
+        "wires": [
+            [
+                "dbg_core",
+                "fn_to_lp"
+            ]
+        ]
+    },
+    {
+        "id": "dbg_core",
+        "type": "debug",
+        "z": "flow-opexia-coreedge",
+        "name": "CORE Debug",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "true",
+        "targetType": "full",
+        "x": 1340,
+        "y": 300,
+        "wires": []
+    },
+    {
+        "id": "fn_to_lp",
+        "type": "function",
+        "z": "flow-opexia-coreedge",
+        "name": "a InfluxDB (Line Protocol)",
+        "func": "// Convierte el mensaje a Line Protocol para InfluxDB v2\nconst parts = (msg.topic || '').split('/');\nconst SITE   = parts[1] || 'LAB';\nconst LAYER  = parts[2] || 'edge';\nconst ENTITY = parts[3] || 'ed-gate-zn1-01';\nconst CHAN   = parts[4] || 'tele';\nconst METRIC = parts[5] || 'piece_count';\n\nconst piece  = (msg.payload && msg.payload.piece != null) ? Number(msg.payload.piece) : Number(msg.payload);\nconst total  = (msg.payload && msg.payload.total != null) ? Number(msg.payload.total) : null;\nconst ts     = (msg.payload && msg.payload.ts) ? Number(msg.payload.ts) : Date.now();\n\nlet fields = `value=${piece}`;\nif (total !== null && !Number.isNaN(total)) fields += `,total=${total}`;\n\nconst t_ns = BigInt(ts) * 1000000n;\nconst lp = `${METRIC},site=${SITE},layer=${LAYER},entity=${ENTITY},channel=${CHAN} ${fields} ${t_ns}`;\n\nmsg.headers = {\n  Authorization: `Token ${flow.get('INFLUX_TOKEN') || ''}`,\n  'Content-Type': 'text/plain'\n};\nmsg.payload = lp;\nmsg.url = `http://influxdb:8086/api/v2/write?org=AlgorithmOps&bucket=OPEXIA&precision=ns`;\nreturn msg;",
+        "outputs": 1,
+        "timeout": "",
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 690,
+        "y": 80,
+        "wires": [
+            [
+                "http_write"
+            ]
+        ]
+    },
+    {
+        "id": "http_write",
+        "type": "http request",
+        "z": "flow-opexia-coreedge",
+        "name": "HTTP write \u2192 InfluxDB",
+        "method": "POST",
+        "ret": "txt",
+        "paytoqs": "ignore",
+        "url": "",
+        "tls": "",
+        "persist": false,
+        "proxy": "",
+        "authType": "",
+        "x": 970,
+        "y": 80,
+        "wires": [
+            [
+                "dbg_core"
+            ]
+        ]
+    },
+    {
+        "id": "set_token",
+        "type": "inject",
+        "z": "flow-opexia-coreedge",
+        "name": "(1 vez) set INFLUX_TOKEN en flow",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "once": false,
+        "topic": "",
+        "payload": "",
+        "payloadType": "str",
+        "x": 280,
+        "y": 680,
+        "wires": [
+            [
+                "fn_store_token"
+            ]
+        ]
+    },
+    {
+        "id": "fn_store_token",
+        "type": "function",
+        "z": "flow-opexia-coreedge",
+        "name": "Guardar token",
+        "func": "// Obtiene el token de InfluxDB desde variable de entorno\nconst token = env.get('INFLUX_TOKEN');\nif (!token) {\n    node.warn('INFLUX_TOKEN no esta definido en el entorno');\n    return null;\n}\nflow.set('INFLUX_TOKEN', token);\nmsg.payload = 'INFLUX_TOKEN almacenado (flow context)';\nreturn msg;",
+        "outputs": 1,
+        "timeout": "",
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 990,
+        "y": 680,
+        "wires": [
+            [
+                "dbg_core"
+            ]
+        ]
+    },
+    {
+        "id": "052978de039fa05b",
+        "type": "switch",
+        "z": "flow-opexia-coreedge",
+        "name": "ON",
+        "property": "payload",
+        "propertyType": "msg",
+        "rules": [
+            {
+                "t": "gt",
+                "v": "5",
+                "vt": "str"
+            },
+            {
+                "t": "lte",
+                "v": "5",
+                "vt": "str"
+            }
+        ],
+        "checkall": "false",
+        "repair": false,
+        "outputs": 2,
+        "x": 150,
+        "y": 320,
+        "wires": [
+            [
+                "dbg_core",
+                "fn_counter",
+                "fn_to_lp"
+            ],
+            [
+                "fn_store_token"
+            ]
+        ]
+    },
+    {
+        "id": "f01e969003944916",
+        "type": "inject",
+        "z": "flow-opexia-coreedge",
+        "name": "",
+        "props": [
+            {
+                "p": "payload"
+            },
+            {
+                "p": "topic",
+                "vt": "str"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "6",
+        "payloadType": "num",
+        "x": 110,
+        "y": 380,
+        "wires": [
+            [
+                "052978de039fa05b"
+            ]
+        ]
+    },
+    {
+        "id": "BROKER_CORE_TLS",
+        "type": "mqtt-broker",
+        "name": "CORE TLS Broker",
+        "broker": "mosquitto",
+        "port": "8883",
+        "tls": "TLS_CA",
+        "clientid": "",
+        "autoConnect": true,
+        "usetls": true,
+        "protocolVersion": "4",
+        "keepalive": "30",
+        "cleansession": true,
+        "autoUnsubscribe": true,
+        "birthTopic": "",
+        "birthQos": "0",
+        "birthPayload": "",
+        "birthMsg": {},
+        "closeTopic": "",
+        "closeQos": "0",
+        "closePayload": "",
+        "closeMsg": {},
+        "willTopic": "",
+        "willQos": "0",
+        "willPayload": "",
+        "willMsg": {},
+        "userProps": "",
+        "sessionExpiry": ""
+    },
+    {
+        "id": "BROKER_EDGE_TLS",
+        "type": "mqtt-broker",
+        "name": "EDGE TLS Broker",
+        "broker": "mosquitto",
+        "port": "8883",
+        "tls": "TLS_CA",
+        "clientid": "",
+        "autoConnect": true,
+        "usetls": true,
+        "protocolVersion": "4",
+        "keepalive": "30",
+        "cleansession": true,
+        "autoUnsubscribe": true,
+        "birthTopic": "",
+        "birthQos": "0",
+        "birthPayload": "",
+        "birthMsg": {},
+        "closeTopic": "",
+        "closeQos": "0",
+        "closePayload": "",
+        "closeMsg": {},
+        "willTopic": "",
+        "willQos": "",
+        "willPayload": "",
+        "willMsg": {},
+        "userProps": "",
+        "sessionExpiry": ""
+    }
+]
