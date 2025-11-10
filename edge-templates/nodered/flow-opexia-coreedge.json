@@ -21,13 +21,14 @@
             }
         ],
         "repeat": "1",
+        "crontab": "",
         "once": true,
         "onceDelay": "1",
         "topic": "opexia/LAB/edge/ed-gate-zn1-01/tele/piece_count",
         "payload": "1",
         "payloadType": "num",
-        "x": 410,
-        "y": 540,
+        "x": 150,
+        "y": 300,
         "wires": [
             [
                 "fn_counter"
@@ -38,7 +39,6 @@
         "id": "fn_counter",
         "type": "function",
         "z": "flow-opexia-coreedge",
-        "d": true,
         "name": "Acumular conteo pieza",
         "func": "// Acumula piezas en memoria (solo demo)\nlet total = flow.get('piece_total') || 0;\nconst inc = Number(msg.payload) || 0;\nif (inc > 0) total += inc;\nflow.set('piece_total', total);\n\n// Env\u00edo como JSON breve para debug y LP\nmsg.payload = { piece: inc, total: total, ts: Date.now() };\nreturn msg;",
         "outputs": 1,
@@ -47,8 +47,8 @@
         "initialize": "",
         "finalize": "",
         "libs": [],
-        "x": 480,
-        "y": 360,
+        "x": 400,
+        "y": 300,
         "wires": [
             [
                 "mqtt_out_edge",
@@ -71,8 +71,8 @@
         "correl": "",
         "expiry": "",
         "broker": "BROKER_EDGE_TLS",
-        "x": 930,
-        "y": 360,
+        "x": 690,
+        "y": 160,
         "wires": []
     },
     {
@@ -88,8 +88,8 @@
         "rap": true,
         "rh": 0,
         "inputs": 0,
-        "x": 160,
-        "y": 220,
+        "x": 280,
+        "y": 100,
         "wires": [
             [
                 "dbg_core",
@@ -108,8 +108,10 @@
         "tostatus": false,
         "complete": "true",
         "targetType": "full",
-        "x": 1340,
-        "y": 300,
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 1260,
+        "y": 100,
         "wires": []
     },
     {
@@ -117,15 +119,15 @@
         "type": "function",
         "z": "flow-opexia-coreedge",
         "name": "a InfluxDB (Line Protocol)",
-        "func": "// Convierte el mensaje a Line Protocol para InfluxDB v2\nconst parts = (msg.topic || '').split('/');\nconst SITE   = parts[1] || 'LAB';\nconst LAYER  = parts[2] || 'edge';\nconst ENTITY = parts[3] || 'ed-gate-zn1-01';\nconst CHAN   = parts[4] || 'tele';\nconst METRIC = parts[5] || 'piece_count';\n\nconst piece  = (msg.payload && msg.payload.piece != null) ? Number(msg.payload.piece) : Number(msg.payload);\nconst total  = (msg.payload && msg.payload.total != null) ? Number(msg.payload.total) : null;\nconst ts     = (msg.payload && msg.payload.ts) ? Number(msg.payload.ts) : Date.now();\n\nlet fields = `value=${piece}`;\nif (total !== null && !Number.isNaN(total)) fields += `,total=${total}`;\n\nconst t_ns = BigInt(ts) * 1000000n;\nconst lp = `${METRIC},site=${SITE},layer=${LAYER},entity=${ENTITY},channel=${CHAN} ${fields} ${t_ns}`;\n\nmsg.headers = {\n  Authorization: `Token ${flow.get('INFLUX_TOKEN') || ''}`,\n  'Content-Type': 'text/plain'\n};\nmsg.payload = lp;\nmsg.url = `http://influxdb:8086/api/v2/write?org=AlgorithmOps&bucket=OPEXIA&precision=ns`;\nreturn msg;",
+        "func": "// Convierte el mensaje a Line Protocol para InfluxDB v2\nconst parts = (msg.topic || '').split('/');\nconst SITE   = parts[1] || 'LAB';\nconst LAYER  = parts[2] || 'edge';\nconst ENTITY = parts[3] || 'ed-gate-zn1-01';\nconst CHAN   = parts[4] || 'tele';\nconst METRIC = parts[5] || 'piece_count';\n\nconst piece  = (msg.payload && msg.payload.piece != null) ? Number(msg.payload.piece) : Number(msg.payload);\nconst total  = (msg.payload && msg.payload.total != null) ? Number(msg.payload.total) : null;\nconst ts     = (msg.payload && msg.payload.ts) ? Number(msg.payload.ts) : Date.now();\n\nlet fields = `value=${piece}`;\nif (total !== null && !Number.isNaN(total)) fields += `,total=${total}`;\n\nconst token = env.get('INFLUX_TOKEN') || flow.get('INFLUX_TOKEN');\nif (!token) {\n    node.warn('INFLUX_TOKEN no est\u00e1 disponible (env o flow)');\n    return null;\n}\n\nconst t_ns = BigInt(ts) * 1000000n;\nconst lp = `${METRIC},site=${SITE},layer=${LAYER},entity=${ENTITY},channel=${CHAN} ${fields} ${t_ns}`;\n\nmsg.headers = {\n  Authorization: `Token ${token}`,\n  'Content-Type': 'text/plain'\n};\nmsg.payload = lp;\nmsg.url = `http://influxdb:8086/api/v2/write?org=AlgorithmOps&bucket=OPEXIA&precision=ns`;\nreturn msg;",
         "outputs": 1,
         "timeout": "",
         "noerr": 0,
         "initialize": "",
         "finalize": "",
         "libs": [],
-        "x": 690,
-        "y": 80,
+        "x": 670,
+        "y": 580,
         "wires": [
             [
                 "http_write"
@@ -145,8 +147,8 @@
         "persist": false,
         "proxy": "",
         "authType": "",
-        "x": 970,
-        "y": 80,
+        "x": 950,
+        "y": 580,
         "wires": [
             [
                 "dbg_core"
@@ -164,7 +166,7 @@
             }
         ],
         "repeat": "",
-        "once": false,
+        "once": true,
         "topic": "",
         "payload": "",
         "payloadType": "str",
@@ -174,14 +176,15 @@
             [
                 "fn_store_token"
             ]
-        ]
+        ],
+        "onceDelay": "1"
     },
     {
         "id": "fn_store_token",
         "type": "function",
         "z": "flow-opexia-coreedge",
         "name": "Guardar token",
-        "func": "// Obtiene el token de InfluxDB desde variable de entorno\nconst token = env.get('INFLUX_TOKEN');\nif (!token) {\n    node.warn('INFLUX_TOKEN no esta definido en el entorno');\n    return null;\n}\nflow.set('INFLUX_TOKEN', token);\nmsg.payload = 'INFLUX_TOKEN almacenado (flow context)';\nreturn msg;",
+        "func": "// Obtiene el token de InfluxDB desde variable de entorno\nconst token = env.get('INFLUX_TOKEN');\nif (!token) {\n    node.warn('INFLUX_TOKEN no est\u00e1 definido en el entorno');\n    return null;\n}\nflow.set('INFLUX_TOKEN', token);\nmsg.payload = 'INFLUX_TOKEN almacenado (flow context)';\nreturn msg;",
         "outputs": 1,
         "timeout": "",
         "noerr": 0,
@@ -197,68 +200,18 @@
         ]
     },
     {
-        "id": "052978de039fa05b",
-        "type": "switch",
-        "z": "flow-opexia-coreedge",
-        "name": "ON",
-        "property": "payload",
-        "propertyType": "msg",
-        "rules": [
-            {
-                "t": "gt",
-                "v": "5",
-                "vt": "str"
-            },
-            {
-                "t": "lte",
-                "v": "5",
-                "vt": "str"
-            }
-        ],
-        "checkall": "false",
-        "repair": false,
-        "outputs": 2,
-        "x": 150,
-        "y": 320,
-        "wires": [
-            [
-                "dbg_core",
-                "fn_counter",
-                "fn_to_lp"
-            ],
-            [
-                "fn_store_token"
-            ]
-        ]
-    },
-    {
-        "id": "f01e969003944916",
-        "type": "inject",
-        "z": "flow-opexia-coreedge",
-        "name": "",
-        "props": [
-            {
-                "p": "payload"
-            },
-            {
-                "p": "topic",
-                "vt": "str"
-            }
-        ],
-        "repeat": "",
-        "crontab": "",
-        "once": false,
-        "onceDelay": 0.1,
-        "topic": "",
-        "payload": "6",
-        "payloadType": "num",
-        "x": 110,
-        "y": 380,
-        "wires": [
-            [
-                "052978de039fa05b"
-            ]
-        ]
+        "id": "TLS_CA",
+        "type": "tls-config",
+        "name": "CA Mosquitto",
+        "cert": "",
+        "key": "",
+        "ca": "-----BEGIN CERTIFICATE-----\nMIIFCTCCAvGgAwIBAgIUZbLNlZ2OKCb7sR+E570gfEBPeGQwDQYJKoZIhvcNAQEL\nBQAwFDESMBAGA1UEAwwJT1BFWElBLUNBMB4XDTI1MTAyNTA4NTcwNVoXDTI4MDEy\nODA4NTcwNVowFDESMBAGA1UEAwwJT1BFWElBLUNBMIICIjANBgkqhkiG9w0BAQEF\nAAOCAg8AMIICCgKCAgEAshtIprKa9eyisZr6/eVH12xel8GKaPJbFwPKGJC3Hska\nx9bk/TNN136rSs14KfyxuJRxlfj57efdotAu3W9Zv0h3/7QspHE4frQo/b2M7J+E\njKBUy2rawgSm8O+21MobVQz52cbWCKOopvtOF8pIwo7lUXODp5K0rs5AILfoCzEz\nVlurByY2jJ3i2GFYJyQgbmoJeDyYWJx6fcVxo/yjcQN7uFQYotbr1PLtt7RUOCtD\nfrU4NIxdapA44bF/XgQdhLA2geECxzD9Hukk8xz3n9iNso/crOgfXa3pGT8kWK+m\nwNKXro8UDKFiYMgLObpljsct3PoHLOZnbejxzUIb34viLmnnDJDE2IHiCcC/n10F\n4VQeyCCnIXi6akCnw5W8MTE25uzdEwNg1Y0UlmASWxB2Q78X7R0BA81sE1hkbtki\nIL8b+83kQ6egMCw1cpjFnh8+WNSVjR93x0lv81hZ03iOnwjMEqDsX+BqWA6Jm9kn\nUPnC0l0mwrpV5LgXKJLw0Cys93+R1j12E1/85vRu1uH4pxiPci5UjAcwXXHAFdEu\nug3D2m0VNYcmMDA0e8CImH39Pk4BAkjE8mjC4veG4LS1FBlpL+eeF17KbMVfKJrI\nebs61/xSAWu85g/3X0DEOUiPLv1RSncPQbelGSPRUPBt8L0u9xYOSpCzxXWTXC0C\nAwEAAaNTMFEwHQYDVR0OBBYEFHQbtbxAZ0A2Nu3XN7AvJ7HpuyILMB8GA1UdIwQY\nMBaAFHQbtbxAZ0A2Nu3XN7AvJ7HpuyILMA8GA1UdEwEB/wQFMAMBAf8wDQYJKoZI\nhvcNAQELBQADggIBAAmb5zTbEv9yQqvpeflQGvI1Hsy4mwgLrK30cn6Fnn+yLiyE\n+uplu9vaeGkxrDMdcqO4TEc74NjxtkvaKQf9bPOkrruRQXhAn++a3ALV5avQVAhW\nrG39Hy+Cf2Nz7DbU8HBa9e5ncUIMU8kSALM+xjybTDtXk44uJ7XDju70M3CZiUGx\nNlWQyEnIW3HnbBZ4brZrRB0kC7Dy3kPs10DFGalgEuZSLSulOEVwF1uITogMbbtb\nedxJ7sDmTCsm8/JJgwarjkoH8DQ0qWXw/uT9+croDPJ9sTHjPjtpZrzN4o5w5tH1\nIR93JiZjReEhGNp6oo4/dFkWVtR1JEisPw2Gf2EYUSrHuzXACw9zHf5n0ZD6gHXB\nLJ3eBwmb8DFsYwgVbD+bfEbXpqyBxay2oLPJ3jyW20450fmyud0pg5FKGgQSjItn\nJCW5A7h3R/TrYDJJynSIBrv05AqErQECTMzhdt9wEr7M8wuS4hSQp17/dWYaOqLn\n7QvdV9AwJPL364gqA2JeTldyusPdFZf9XluDsuWZhqM6/qj6qvExzDz1cfUakHYL\nJxFpA6xYIne2QOrxVkZBtI5dD49U+zt4BicMs1rbS7TWiC0HtJWoXdCSfdQFWdom\njZcsQhukcpiYk7o76LOCWp4EtcXRMV/aouZt0BW40MOJLTSZ2Pc0lcymVRfu\n-----END CERTIFICATE-----\n",
+        "certname": "",
+        "keyname": "",
+        "caname": "",
+        "servername": "mosquitto",
+        "verifyservercert": false,
+        "alpnprotocol": ""
     },
     {
         "id": "BROKER_CORE_TLS",

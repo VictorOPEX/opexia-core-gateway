@@ -26,6 +26,7 @@ nx-core-ops/mosquitto/certs/
 
 # InfluxDB & Grafana volumes
 nx-core-ops/influxdb/
+nx-core-ops/influxdb.bak*/
 nx-core-ops/grafana/
 
 # Node-RED sensitive/runtime files
