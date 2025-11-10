@@ -54,6 +54,19 @@ docker compose up -d
 - Antes de importar en otro gateway, ajusta el nodo `fn_store_token` para leer `INFLUX_TOKEN` desde `.env`/secrets en lugar de incrustarlo en el flow.
 - Documenta certificaciones TLS en el nodo `TLS_CA` y asegúrate de que `ca-mosquitto.crt` esté disponible en el host que ejecuta Node-RED.
 
+## Observabilidad (Grafana)
+- El datasource de InfluxDB se aprovisiona automáticamente con `scripts/provision-grafana.sh`. El script lee `INFLUX_TOKEN` de `.env`, copia las plantillas de `grafana/provisioning/*` al contenedor `grafana` y reinicia el servicio.
+  ```bash
+  cd opexia-core-gateway
+  scripts/provision-grafana.sh
+  ```
+- El dashboard `OPEXIA · Core Health` se publica en `http://localhost:3000/d/opexiaCoreHealth` e incluye:
+  - Piezas por minuto (ventana de 1 minuto usando la métrica `piece_count.value`).
+  - Total acumulado en las últimas 24h (campo `piece_count.total`).
+  - Heartbeat del EDGE lógico (segundos desde el último mensaje).
+- Si quieres editar o añadir paneles, modifica `grafana/dashboards/opexia-core-health.json` y vuelve a ejecutar el script para sobrescribirlos en el contenedor.
+- Las plantillas de provisioning (`grafana/provisioning/datasources/*.tmpl` y `grafana/provisioning/dashboards/*.yml`) son las fuentes de verdad; evita cambios manuales dentro del contenedor para que la configuración siga siendo reproducible.
+
 ## Variables `.env` (nombres)
 - `INFLUX_USER`, `INFLUX_PASS`, `INFLUX_TOKEN`
 - `GRAFANA_USER`, `GRAFANA_PASS`
