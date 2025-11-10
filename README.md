@@ -81,6 +81,8 @@ tar -czf backups/nodered-$(date +%F-%H%M).tgz   nx-core-ops/nodered
 docker run --rm -v "$PWD/nx-core-ops/grafana":/data -v "$PWD/backups":/backups alpine \
   sh -c 'cd /data && tar -czf /backups/grafana-$(date +%F-%H%M).tgz .'
 ```
+- Atajo: `./scripts/backup.sh` genera los tres archivos con timestamp y los deja en `backups/`.
+- Restauración guiada: `./scripts/restore.sh --influx influxdb2-YYYYMMDD-HHMMSS.tgz --nodered nodered-YYYYMMDD-HHMMSS.tgz --grafana grafana-YYYYMMDD-HHMMSS.tgz` (ejecuta `docker compose down` antes de correrlo).
 
 ### Checklist de backup
 1. Ejecuta los tres comandos anteriores (InfluxDB, Node-RED, Grafana) y confirma que los archivos `.tgz` aparecen en `backups/`.
