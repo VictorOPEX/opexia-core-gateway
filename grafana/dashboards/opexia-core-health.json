@@ -1,0 +1,159 @@
+{
+  "id": null,
+  "uid": "opexiaCoreHealth",
+  "title": "OPEXIA · Core Health",
+  "timezone": "",
+  "schemaVersion": 38,
+  "version": 1,
+  "refresh": "30s",
+  "time": {
+    "from": "now-6h",
+    "to": "now"
+  },
+  "tags": [
+    "OPEXIA",
+    "Core"
+  ],
+  "panels": [
+    {
+      "id": 1,
+      "title": "Piezas por minuto",
+      "type": "timeseries",
+      "datasource": {
+        "type": "influxdb",
+        "uid": "opexiaInflux"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "color": {
+            "mode": "palette-classic"
+          }
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "query": "from(bucket: \"OPEXIA\")\n  |> range(start: $__from, stop: $__to)\n  |> filter(fn: (r) => r._measurement == \"piece_count\" and r._field == \"value\")\n  |> aggregateWindow(every: 1m, fn: sum, createEmpty: false)\n  |> yield(name: \"sum\")",
+          "queryType": "flux"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "title": "Total acumulado (últimas 24h)",
+      "type": "stat",
+      "datasource": {
+        "type": "influxdb",
+        "uid": "opexiaInflux"
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 12,
+        "x": 0,
+        "y": 8
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 500 },
+              { "color": "red", "value": 1000 }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "textMode": "auto"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "query": "from(bucket: \"OPEXIA\")\n  |> range(start: -24h)\n  |> filter(fn: (r) => r._measurement == \"piece_count\" and r._field == \"total\")\n  |> keep(columns: [\"_value\", \"_time\"])\n  |> last()",
+          "queryType": "flux"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "title": "Heartbeat EDGE logical",
+      "type": "stat",
+      "datasource": {
+        "type": "influxdb",
+        "uid": "opexiaInflux"
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 12,
+        "x": 12,
+        "y": 8
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 30 },
+              { "color": "red", "value": 60 }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "textMode": "value_and_name"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "query": "import \"date\"\nfrom(bucket: \"OPEXIA\")\n  |> range(start: -6h)\n  |> filter(fn: (r) => r._measurement == \"piece_count\" and r._field == \"value\")\n  |> keep(columns: [\"_time\"])\n  |> last()\n  |> map(fn: (r) => ({ r with _value: float(v: now() - r._time) / 1000000000.0, _field: \"seconds_since_last_msg\"}))",
+          "queryType": "flux"
+        }
+      ]
+    }
+  ],
+  "templating": {
+    "list": []
+  },
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {
+          "type": "grafana",
+          "uid": "-- Grafana --"
+        },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  }
+}

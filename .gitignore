@@ -35,3 +35,6 @@ nx-core-ops/nodered/flows_cred.json
 nx-core-ops/nodered/*.backup
 nx-core-ops/nodered/.config*.json
 nx-core-ops/nodered/lib/
+
+# Local helper scripts (keep provision script tracked)
+scripts/*.js
